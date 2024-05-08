@@ -248,13 +248,13 @@ class _MetaCurveMixin:
         positions : np.ndarray
             The positions of the curve.
         """
-
+        ts = np.array([0] + self._ts)
+        
         if len(self._curves) == 1:
             return self._curves[0].at(t)
         if t.ndim == 0:
             t = t.reshape(1)
     
-        ts = np.array([0] + self._ts)
         t = np.maximum(t, 1e-10)
         bi = np.array([bisect.bisect_left(ts, t_i) for t_i in t], dtype=int)
         bi -= 1
