@@ -650,7 +650,7 @@ class Slider(HitObject):
                  time,
                  end_time,
                  hitsound,
-                 curve,
+                 curve: Curve,
                  repeat,
                  length,
                  ticks,
@@ -770,6 +770,23 @@ class Slider(HitObject):
         obj = type(self)(**kwargs)
         obj.hr_enabled = True
         return obj
+
+    def calc_positions_at(self, t: np.array):
+        """Get the positions of this slider at times ``t`` accounting for repeats.
+
+        Args:
+            t (np.array): Array of times at which to calculate the positions. Values must be in the range [0, 1].
+
+        Returns:
+            np.array: Array of positions of the slider at the given times, accounting for repeats.
+        """
+        assert np.all(t >= 0) and np.all(t <= 1), 't must be in [0, 1]'
+
+        def _apply_repeat(x, n_repeat):
+            y = n_repeat * x
+            return 1 - np.abs(y - 2 * np.floor(y / 2) - 1)
+
+        return self.curve.at(_apply_repeat(t, self.repeat))
 
     @classmethod
     def _parse(cls,
