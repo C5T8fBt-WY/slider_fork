@@ -8,9 +8,9 @@ Forked from [llllllllll/slider](https://github.com/llllllllll/slider)
 ## Files changed
 - beatmap.py
   - Slider
-    - [ ] get_edgetimes
-    - [ ] calc_position_at
+    - [x] get_edgetimes
+    - [x] calc_position_at
   - HoldNote
     - [ ] _parse
 - curve.py
-  - implement `at()` for each `Curve`s
+  - [x] implement `at()` for each `Curve`

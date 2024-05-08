@@ -771,6 +771,12 @@ class Slider(HitObject):
         obj.hr_enabled = True
         return obj
 
+    def get_edgetimes(self) -> "list[timedelta]":
+        """Get a time list of this slider's (head, reverse(s), tail).
+        """
+        duration = self.end_time - self.time
+        return [self.time + duration * i / self.repeat for i in range(self.repeat + 1)]
+
     def calc_positions_at(self, t: np.array):
         """Get the positions of this slider at times ``t`` accounting for repeats.
 
