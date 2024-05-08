@@ -69,6 +69,22 @@ class Curve(metaclass=ABCMeta):
             The position of the curve.
         """
         raise NotImplementedError('__call__')
+    
+    @abstractmethod
+    def at(self, t) -> np.ndarray:
+        """Compute the position of the curve at a sequence of times ``t``.
+
+        Parameters
+        ----------
+        t : np.ndarray
+            The times to compute for.
+
+        Returns
+        -------
+        positions : np.ndarray
+            The positions of the curve.
+        """
+        raise NotImplementedError('at')
 
     def pack(self):
         """The packed string representing this curve in ``.osu`` file,
@@ -119,11 +135,11 @@ class Bezier(Curve):
         super().__init__(points, req_length)
         self._coordinates = np.array(points).T
 
-    def __call__(self, t):
-        coordinates = self.at(t * (self.req_length / self.length))
+    def __call__(self, t: float):
+        coordinates = self.at(t)
         return Position(coordinates[0, 0], coordinates[0, 1])
 
-    def at(self, t):
+    def at(self, t: np.ndarray):
         """Compute the positions of the bezier curve for a sequence of times
         from 0 to 1.
 
@@ -139,6 +155,14 @@ class Bezier(Curve):
             holds the x coordinate at time t and the second column holds the y
             coordinate at time t.
         """
+        t_discounted = t * (self.req_length / self.length)
+        return self._at(t_discounted)
+
+
+    def _at(self, t: np.ndarray):
+        """Inner function to compute the theoretical positions of the bezier
+        curve determined by control points, not considering the length of the
+        actual curve in-game."""
         t = np.asarray(t).reshape(-1, 1)
 
         points = self.points
@@ -155,12 +179,13 @@ class Bezier(Curve):
             axis=-1,
         )
 
+
     @lazyval
     def length(self):
         """Approximates length as piecewise linear function.
         """
         # NOTE: if the error is high, try increasing the samples
-        points = self.at(np.linspace(0, 1, 50))
+        points = self._at(np.linspace(0, 1, 50))
         return np.sum(
             np.sqrt(
                 np.sum(
@@ -194,7 +219,7 @@ class _MetaCurveMixin:
         out.append(1)
         return out
 
-    def __call__(self, t):
+    def __call__(self, t: float):
         ts = self._ts
         if len(self._curves) == 1:
             # Special case where we only have one curve
@@ -209,6 +234,38 @@ class _MetaCurveMixin:
         post_t = ts[bi]
 
         return self._curves[bi]((t - pre_t) / (post_t - pre_t))
+
+    def at(self, t: np.ndarray) -> np.ndarray:
+        """Compute the position of the curve at a sequence of times ``t`` for this metacurve.
+
+        Parameters
+        ----------
+        t : np.ndarray
+            The times to compute for.
+
+        Returns
+        -------
+        positions : np.ndarray
+            The positions of the curve.
+        """
+
+        if len(self._curves) == 1:
+            return self._curves[0].at(t)
+        if t.ndim == 0:
+            t = t.reshape(1)
+    
+        ts = np.array([0] + self._ts)
+        t = np.maximum(t, 1e-10)
+        bi = np.array([bisect.bisect_left(ts, t_i) for t_i in t], dtype=int)
+        bi -= 1
+
+        ret = []
+        for i in range(len(self._curves)):
+            pre_t = ts[i]
+            post_t = ts[i + 1]
+            ret.extend(self._curves[i].at((t[bi == i] - pre_t) / (post_t - pre_t)))
+
+        return np.array(ret)
 
 
 class MultiBezier(_MetaCurveMixin, Curve):
@@ -323,8 +380,11 @@ class Perfect(Curve):
         if length > req_length:
             self._angle *= req_length / length
 
-    def __call__(self, t):
+    def __call__(self, t: float):
         return rotate(self.points[0], self._center, self._angle * t)
+
+    def at(self, t: np.ndarray):
+        return self(t)
 
 
 class Catmull(Curve):
@@ -401,6 +461,7 @@ class Catmull(Curve):
             # make it a column vector
             Cx = Cx[:, np.newaxis]
             self.Cxs.append(Cx)
+        self.Cxs = np.array(self.Cxs)
 
         for ((p1, p2), (t1, t2)) in zip(zip(points, points[1:]),
                                         zip(tangents_y, tangents_y[1:])):
@@ -408,8 +469,9 @@ class Catmull(Curve):
             # make it a column vector
             Cy = Cy[:, np.newaxis]
             self.Cys.append(Cy)
+        self.Cys = np.array(self.Cys)
 
-    def __call__(self, t):
+    def __call__(self, t: float):
         # single control point case. Treat as a 0 length, 0 duration slider,
         # with position equal to its single control point. See comment in
         # __init__ for details.
@@ -440,6 +502,33 @@ class Catmull(Curve):
         px = float(px)
         py = float(py)
         return Position(px, py)
+    
+    def at(self, t: np.ndarray):
+        result = []
+        if t.ndim == 0:
+            t = t.reshape(1)
+
+        if len(self.points) == 1:
+            result = self.points[0] * len(t)
+        else:
+            s_list = t.copy()
+            S_list = np.stack([s_list**3, s_list**2, s_list**1, s_list**0])
+
+            curve_index_list = np.minimum(
+                np.ceil(np.maximum(t, np.array([1e-10])) * len(self.Cxs)) - 1,
+                len(self.Cxs) - 1,
+            ).astype(int)
+            Cx_list = self.Cxs[curve_index_list]
+            Cy_list = self.Cys[curve_index_list]
+
+            S_list = S_list.T[:, None, :]
+            x = ((S_list @ self.h) @ Cx_list).squeeze(-1).squeeze(-1)
+            y = ((S_list @ self.h) @ Cy_list).squeeze(-1).squeeze(-1)
+            result = [Position(px, py) for px, py in zip(x, y)]
+
+
+        return np.array(result)
+
 
 
 def get_center(a, b, c):
@@ -490,8 +579,13 @@ def rotate(position, center, radians):
         The position to rotate.
     center : Position
         The point to rotate about.
-    radians : float
+    radians : float or np.ndarray
         The number of radians to rotate ``position`` by.
+
+    Returns
+    -------
+    rotated : Position or np.ndarray
+        The rotated position.
     """
     p_x, p_y = position
     c_x, c_y = center
@@ -499,7 +593,9 @@ def rotate(position, center, radians):
     x_dist = p_x - c_x
     y_dist = p_y - c_y
 
-    return Position(
-        (x_dist * math.cos(radians) - y_dist * math.sin(radians)) + c_x,
-        (x_dist * math.sin(radians) + y_dist * math.cos(radians)) + c_y,
-    )
+    ret_x = x_dist * np.cos(radians) - y_dist * np.sin(radians) + c_x
+    ret_y = x_dist * np.sin(radians) + y_dist * np.cos(radians) + c_y
+
+    if isinstance(radians, float):
+        return Position(ret_x, ret_y)
+    return np.stack([ret_x, ret_y], -1)
