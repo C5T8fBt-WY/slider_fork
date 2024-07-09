@@ -276,6 +276,10 @@ class HitObject:
         self.time = time
         self.hitsound = hitsound
         self.addition = addition
+        self.sample_sets = addition.split(':')[:2]
+        self.sample_idx = addition.split(':')[2]
+        self.hitsound_volume = addition.split(':')[3]
+        self.sample_filename = addition.split(':')[4]
         self.new_combo = new_combo
         self.combo_skip = combo_skip
 
