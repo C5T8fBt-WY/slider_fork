@@ -881,6 +881,8 @@ class Slider(HitObject):
                         f'edge_sound should be an int, got {edge_sound!r}',
                     )
                 edge_sounds.append(edge_sound)
+        else:
+            edge_sounds = [0] * (repeat + 1)
 
         try:
             edge_additions_grouped, *rest = rest
