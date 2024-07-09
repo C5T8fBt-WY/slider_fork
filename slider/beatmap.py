@@ -1011,7 +1011,8 @@ class HoldNote(HitObject):
     @classmethod
     def _parse(cls, position, time, hitsound, new_combo, combo_skip, rest):
         try:
-            end_time, *rest = rest
+            assert len(rest) == 1
+            end_time, *rest = rest[0].split(':', 1)
         except ValueError:
             raise ValueError('missing end_time')
 
@@ -1022,8 +1023,7 @@ class HoldNote(HitObject):
         if len(rest) > 1:
             raise ValueError('extra data: {rest!r}')
 
-        return cls(position, time, hitsound, end_time, new_combo, combo_skip,
-                   *rest)
+        return cls(position, time, hitsound, end_time, *rest, new_combo, combo_skip)
 
     def pack(self):
         """The string representing this HoldNote hit element used in ``.osu`` file,
