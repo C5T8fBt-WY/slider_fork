@@ -11,6 +11,6 @@ Forked from [llllllllll/slider](https://github.com/llllllllll/slider)
     - [x] get_edgetimes
     - [x] calc_position_at
   - HoldNote
-    - [ ] _parse
+    - [x] _parse
 - curve.py
   - [x] implement `at()` for each `Curve`
