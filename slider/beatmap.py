@@ -654,6 +654,7 @@ class Slider(HitObject):
                  time,
                  end_time,
                  hitsound,
+                 curve_type,
                  curve: Curve,
                  repeat,
                  length,
@@ -669,6 +670,7 @@ class Slider(HitObject):
         super().__init__(position, time, hitsound, addition, new_combo,
                          combo_skip)
         self.end_time = end_time
+        self.curve_type = curve_type
         self.curve = curve
         self.repeat = repeat
         self.length = length
@@ -678,6 +680,8 @@ class Slider(HitObject):
         self.ms_per_beat = ms_per_beat
         self.edge_sounds = edge_sounds
         self.edge_additions = edge_additions
+        self.edge_sample_sets = [edge_addition.split(':')[0] for edge_addition in edge_additions]
+        self.edge_sample_indices = [edge_addition.split(':')[1] for edge_addition in edge_additions]
 
     @lazyval
     def tick_points(self):
@@ -890,12 +894,9 @@ class Slider(HitObject):
             edge_additions_grouped = ''
 
         if edge_additions_grouped:
-            edge_additions = [
-                list(map(int, nomal_addition.split(":")))
-                for nomal_addition in edge_additions_grouped.split('|')
-            ]
+            edge_additions = edge_additions_grouped.split('|')
         else:
-            edge_additions = [[0, 0]] * (repeat + 1)
+            edge_additions = ["0:0"] * (repeat + 1)
 
         if len(rest) > 1:
             raise ValueError(f'extra data: {rest!r}')
@@ -933,6 +934,7 @@ class Slider(HitObject):
             time,
             time + duration,
             hitsound,
+            slider_type,
             Curve.from_kind_and_points(slider_type, points, pixel_length),
             repeat,
             pixel_length,
