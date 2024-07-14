@@ -890,9 +890,12 @@ class Slider(HitObject):
             edge_additions_grouped = ''
 
         if edge_additions_grouped:
-            edge_additions = edge_additions_grouped.split('|')
+            edge_additions = [
+                list(map(int, nomal_addition.split(":")))
+                for nomal_addition in edge_additions_grouped.split('|')
+            ]
         else:
-            edge_additions = []
+            edge_additions = [[0, 0]] * (repeat + 1)
 
         if len(rest) > 1:
             raise ValueError(f'extra data: {rest!r}')
@@ -2572,7 +2575,7 @@ class Beatmap:
         format_version = int(match.group(1))
         if min_version is not None and format_version < min_version:
             return None
-        
+
         groups = cls._find_groups(lines)
 
         artist = _get_as_str(groups, 'Metadata', 'Artist')
