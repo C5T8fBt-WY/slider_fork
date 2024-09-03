@@ -398,7 +398,7 @@ class HitObject:
             Raised when ``data`` does not describe a ``HitObject`` object.
         """
         try:
-            x, y, time, type_, hitsound, *rest = data.split(',')
+            x, y, time, type_, hitsound, *rest = data.rstrip(",").split(',')
         except ValueError:
             raise ValueError(f'not enough elements in line, got {data!r}')
 
