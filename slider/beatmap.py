@@ -2343,7 +2343,7 @@ class Beatmap:
         return f'<{type(self).__qualname__}: {self.display_name}>'
 
     @classmethod
-    def from_osz_path(cls, path, min_version=None):
+    def from_osz_path(cls, path, min_version=None, meta_only=False):
         """Read a beatmap collection from an ``.osz`` file on disk.
 
         Parameters
@@ -2362,10 +2362,10 @@ class Beatmap:
             Raised when the file cannot be parsed as a ``.osz`` file.
         """
         with ZipFile(path) as zf:
-            return cls.from_osz_file(zf, min_version=min_version)
+            return cls.from_osz_file(zf, min_version=min_version, meta_only=meta_only)
 
     @classmethod
-    def from_path(cls, path, min_version=None):
+    def from_path(cls, path, min_version=None, meta_only=False):
         """Read in a ``Beatmap`` object from a file on disk.
 
         Parameters
@@ -2384,10 +2384,10 @@ class Beatmap:
             Raised when the file cannot be parsed as a ``.osu`` file.
         """
         with open(path, encoding='utf-8-sig') as file:
-            return cls.from_file(file, min_version=min_version)
+            return cls.from_file(file, min_version=min_version, meta_only=meta_only)
 
     @classmethod
-    def from_osz_file(cls, file, min_version=None):
+    def from_osz_file(cls, file, min_version=None, meta_only=False):
         """Read a beatmap collection from a ``.osz`` file on disk.
 
         Parameters
@@ -2407,15 +2407,13 @@ class Beatmap:
         """
         return {
             beatmap.version: beatmap
-            for beatmap in (
-                Beatmap.parse(file.read(name).decode('utf-8-sig'), min_version=min_version)
-                for name in
-                file.namelist() if name.endswith('.osu')
-            )
+            for beatmap in (Beatmap.parse(
+                file.read(name).decode('utf-8-sig'), min_version=min_version, meta_only=meta_only)
+                            for name in file.namelist() if name.endswith('.osu'))
         }
 
     @classmethod
-    def from_file(cls, file, min_version=None):
+    def from_file(cls, file, min_version=None, meta_only=False):
         """Read in a ``Beatmap`` object from an open file object.
 
         Parameters
@@ -2433,7 +2431,7 @@ class Beatmap:
         ValueError
             Raised when the file cannot be parsed as a ``.osu`` file.
         """
-        return cls.parse(file.read(), min_version=min_version)
+        return cls.parse(file.read(), min_version=min_version, meta_only=meta_only)
 
     _mapping_groups = frozenset({
         'General',
@@ -2543,7 +2541,7 @@ class Beatmap:
         return groups
 
     @classmethod
-    def parse(cls, data, min_version=None):
+    def parse(cls, data, min_version=None, meta_only=False):
         """Parse a ``Beatmap`` from text in the ``.osu`` format.
 
         Parameters
@@ -2702,7 +2700,7 @@ class Beatmap:
             slider_multiplier=slider_multiplier,
             slider_tick_rate=slider_tick_rate,
             timing_points=timing_points,
-            hit_objects=list(map(
+            hit_objects=None if meta_only else list(map(
                 partial(
                     HitObject.parse,
                     timing_points=timing_points,
