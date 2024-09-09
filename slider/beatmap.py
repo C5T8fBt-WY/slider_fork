@@ -500,11 +500,12 @@ class Circle(HitObject):
     def _parse(cls, position, time, hitsound, new_combo, combo_skip, rest):
         if len(rest) > 1:
             raise ValueError('extra data: {rest!r}')
-        return cls(position, time, hitsound, *rest, new_combo=new_combo, combo_skip=combo_skip)
+        return cls(position, time, hitsound, *rest, new_combo=new_combo,
+                   combo_skip=combo_skip)
 
     def pack(self):
-        """The string representing this circle hit element used in ``.osu`` file,
-        without trailing ``\\n``.
+        """The string representing this circle hit element used in ``.osu``
+        file, without trailing ``\\n``.
 
         Returns
         -------
@@ -577,12 +578,12 @@ class Spinner(HitObject):
         if len(rest) > 1:
             raise ValueError(f'extra data: {rest!r}')
 
-        return cls(position, time, hitsound, end_time, *rest, new_combo=new_combo,
-                   combo_skip=combo_skip)
+        return cls(position, time, hitsound, end_time, *rest,
+                   new_combo=new_combo, combo_skip=combo_skip)
 
     def pack(self):
-        """The string representing this spinner hit element used in ``.osu`` file,
-        without trailing ``\\n``.
+        """The string representing this spinner hit element used in ``.osu``
+        file, without trailing ``\\n``.
 
         Returns
         -------
@@ -679,8 +680,10 @@ class Slider(HitObject):
         self.ms_per_beat = ms_per_beat
         self.edge_sounds = edge_sounds
         self.edge_additions = edge_additions
-        self.edge_sample_sets = [edge_addition.split(':')[0] for edge_addition in edge_additions]
-        self.edge_sample_indices = [edge_addition.split(':')[1] for edge_addition in edge_additions]
+        self.edge_sample_sets = [edge_addition.split(':')[0] for edge_addition
+                                 in edge_additions]
+        self.edge_sample_indices = [edge_addition.split(':')[1]
+                                    for edge_addition in edge_additions]
 
     @lazyval
     def tick_points(self):
@@ -782,16 +785,20 @@ class Slider(HitObject):
         """Get a time list of this slider's (head, reverse(s), tail).
         """
         duration = self.end_time - self.time
-        return [self.time + duration * i / self.repeat for i in range(self.repeat + 1)]
+        return [self.time + duration * i / self.repeat
+                for i in range(self.repeat + 1)]
 
     def calc_positions_at(self, t: np.array):
-        """Get the positions of this slider at times ``t`` accounting for repeats.
+        """Get the positions of this slider at times ``t``
+        accounting for repeats.
 
         Args:
-            t (np.array): Array of times at which to calculate the positions. Values must be in the range [0, 1].
+            t (np.array): Array of times at which to calculate the positions.
+            Values must be in the range [0, 1].
 
         Returns:
-            np.array: Array of positions of the slider at the given times, accounting for repeats.
+            np.array: Array of positions of the slider at the given times,
+            accounting for repeats.
         """
         assert np.all(t >= 0) and np.all(t <= 1), 't must be in [0, 1]'
 
@@ -949,8 +956,8 @@ class Slider(HitObject):
         )
 
     def pack(self):
-        """The string representing this slider hit element used in ``.osu`` file,
-        without trailing ``\\n``.
+        """The string representing this slider hit element used in ``.osu``
+        file, without trailing ``\\n``.
 
         Returns
         -------
@@ -1027,11 +1034,12 @@ class HoldNote(HitObject):
         if len(rest) > 1:
             raise ValueError('extra data: {rest!r}')
 
-        return cls(position, time, hitsound, end_time, *rest, new_combo, combo_skip)
+        return cls(position, time, hitsound, end_time, *rest, new_combo,
+                   combo_skip)
 
     def pack(self):
-        """The string representing this HoldNote hit element used in ``.osu`` file,
-        without trailing ``\\n``.
+        """The string representing this HoldNote hit element used in ``.osu``
+        file, without trailing ``\\n``.
 
         Returns
         -------
@@ -1346,7 +1354,7 @@ def _pack_int(field: str, int_in: int, default=no_default):
     return str(int(int_in))
 
 
-def _pack_float(field: str, float_in: float or int, default=no_default):
+def _pack_float(field: str, float_in: float | int, default=no_default):
     """Pack float to a string. If the float number can be converted to
     int without loss, return the packed string of the converted int.
 
@@ -2408,8 +2416,9 @@ class Beatmap:
         return {
             beatmap.version: beatmap
             for beatmap in (Beatmap.parse(
-                file.read(name).decode('utf-8-sig'), min_version=min_version, meta_only=meta_only)
-                            for name in file.namelist() if name.endswith('.osu'))
+                file.read(name).decode('utf-8-sig'), min_version=min_version,
+                meta_only=meta_only) for name in
+                            file.namelist() if name.endswith('.osu'))
         }
 
     @classmethod
@@ -2431,7 +2440,8 @@ class Beatmap:
         ValueError
             Raised when the file cannot be parsed as a ``.osu`` file.
         """
-        return cls.parse(file.read(), min_version=min_version, meta_only=meta_only)
+        return cls.parse(file.read(), min_version=min_version,
+                         meta_only=meta_only)
 
     _mapping_groups = frozenset({
         'General',
@@ -2812,7 +2822,8 @@ class Beatmap:
             packed_str += pack_field('BeatmapID', self.beatmap_id, _pack_int, )
 
         if self.beatmap_set_id is not None:
-            packed_str += pack_field('BeatmapSetID', self.beatmap_set_id, _pack_int)
+            packed_str += pack_field('BeatmapSetID', self.beatmap_set_id,
+                                     _pack_int)
         packed_str += '\n'
 
         # pack Difficulty section
