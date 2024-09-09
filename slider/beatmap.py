@@ -1156,6 +1156,9 @@ def _get_as_int_list(groups, section, field, default=no_default):
 
     if v is default:
         return v
+    if field == 'Bookmarks' and v == '':
+        # special case in some ranked beatmap
+        return []
 
     try:
         return [int(e.strip()) for e in v.split(',')]
