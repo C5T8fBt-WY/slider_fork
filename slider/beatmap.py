@@ -6,6 +6,8 @@ from itertools import chain, islice, cycle
 import operator as op
 import re
 from zipfile import ZipFile
+import math
+from copy import deepcopy
 
 import numpy as np
 
@@ -1557,6 +1559,25 @@ def _moving_average_by_time(times, data, delta, num):
     return out_times.reshape((-1, 1)), out_values
 
 
+def _away_from_zero_round(x):
+    """Round a number away from zero.
+
+    Parameters
+    ----------
+    x : float
+        The number to round.
+
+    Returns
+    -------
+    rounded : int
+        The rounded number.
+    """
+    if x >= 0.0:
+        return math.floor(x + 0.5)
+    else:
+        return math.ceil(x - 0.5)
+
+
 class _DifficultyHitObject:
     """An object used to accumulate the strain information for calculating
     stars.
@@ -2289,6 +2310,18 @@ class Beatmap:
         """
         return [hitobj.time for hitobj in self._hit_objects]
 
+    @lazyval
+    def uninherited_timing_points(self) -> list[TimingPoint]:
+        """The timing points that are not inherited by the beatmap.
+        """
+        return [tp for tp in self.timing_points if tp.parent is None]
+
+    @lazyval
+    def _timing_point_times(self):
+        """a (sorted) list of timing point time's
+        """
+        return [tp.offset for tp in self.timing_points]
+
     def closest_hitobject(self, t, side="left"):
         """The hitobject closest in time to ``t``.
 
@@ -2335,6 +2368,84 @@ class Beatmap:
         if hitobj1_closer:
             return hitobj1
         return hitobj2
+
+    def get_closest_snapped_time(self, time: timedelta, divisor: int,
+                                 timing_point: TimingPoint | None = None):
+        """Get the closest snapped time to the given time.
+
+        Parameters
+        ----------
+        time : timedelta
+            The time to snap.
+        divisor : int
+            The divisor to snap to.
+        timing_point : TimingPoint, optional
+            The reference timing point to snap to, which increases performance.
+
+        Returns
+        -------
+        snapped_time : timedelta
+            The snapped time."""
+        td0 = timedelta(0)
+        if timing_point is None:
+            timing_point = self.uninherited_timing_point_at(time)
+        beat_length = timing_point.ms_per_beat / divisor
+        beats = (max(td0, time) - timing_point.offset) / beat_length * 1000
+        round_beats = _away_from_zero_round(beats.total_seconds())
+        snapped_time = timing_point.offset + timedelta(
+            milliseconds=round_beats * beat_length)
+        # print(f"{beat_length}|{beats}|{round_beats}|{snapped_time}")
+        if snapped_time >= td0:
+            return snapped_time
+        else:
+            return snapped_time + timedelta(beat_length)
+
+    def snap_all(self, target_divisors, round_to_ms=True, tolerance=1.0, inplace=False):
+        """
+        Re-calculate timings of the hit objects with the given divisors.
+        
+        Parameters
+        ----------
+        target_divisors : list[int]
+            The divisors to snap to.
+        round_to_ms : bool, optional
+            Whether to round the snapped time to the nearest millisecond.
+            
+        Returns
+        -------
+        resnapped_hit_objects : list[HitObject]
+            The resnapped hit objects.
+        """
+
+        tor_td = timedelta(milliseconds=tolerance)
+        if len(self.uninherited_timing_points) == 1:
+            tp = self.uninherited_timing_points[0]
+        else:
+            tp = None
+
+        resnapped_hit_objects = None if inplace else []
+        for hit_object in self._hit_objects:
+            snapped = False
+            for div in target_divisors:
+                resnapped_time = self.get_closest_snapped_time(hit_object.time,
+                                                               div, tp)
+                if abs(resnapped_time - hit_object.time) <= tor_td:
+                    if round_to_ms:
+                        resnapped_time = timedelta(
+                            milliseconds=round(resnapped_time.total_seconds() * 1000))
+                    snapped = True
+                    break
+            if not snapped:
+                resnapped_time = hit_object.time
+
+            if inplace:
+                hit_object.time = resnapped_time
+            else:
+                new_obj = deepcopy(hit_object)
+                new_obj.time = resnapped_time
+                resnapped_hit_objects.append(new_obj)
+
+        return resnapped_hit_objects
 
     @lazyval
     def max_combo(self):
@@ -2897,7 +3008,28 @@ class Beatmap:
             if tp.offset <= time:
                 return tp
 
-        return self.timing_points[0]
+    def uninherited_timing_point_at(self, time):
+        """Get the uninherited :class:`slider.beatmap.TimingPoint` (red line)
+        at the given time.
+
+        Parameters
+        ----------
+        time : datetime.timedelta
+            The time to lookup the :class:`slider.beatmap.TimingPoint` for.
+
+        Returns
+        -------
+        timing_point : TimingPoint
+            The :class:`slider.beatmap.TimingPoint` at the given time.
+        """
+
+        for tp in reversed(self.uninherited_timing_points):
+            if tp.offset <= time:
+                return tp
+
+        # Since there must be at least one tp, we can return the first one.
+        # This can happen when the first object is 1ms faster than
+        return self.uninherited_timing_points[0]
 
     @staticmethod
     def _base_strain(strain):
