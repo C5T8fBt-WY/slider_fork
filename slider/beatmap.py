@@ -1829,7 +1829,7 @@ class Beatmap:
         self.approach_rate = approach_rate
         self.slider_multiplier = slider_multiplier
         self.slider_tick_rate = slider_tick_rate
-        self.timing_points = timing_points
+        self.timing_points: list[TimingPoint] = timing_points
         self._hit_objects = hit_objects
         # cache hit object stacking at different ar and cs values
         self._hit_objects_with_stacking = {}
@@ -2025,7 +2025,7 @@ class Beatmap:
                     easy=False,
                     hard_rock=False,
                     double_time=False,
-                    half_time=False):
+                    half_time=False) -> tuple[HitObject]:
         """Retrieve hit_objects.
 
         Parameters
@@ -2370,7 +2370,8 @@ class Beatmap:
             Raised when the file cannot be parsed as a ``.osz`` file.
         """
         with ZipFile(path) as zf:
-            return cls.from_osz_file(zf, min_version=min_version, meta_only=meta_only)
+            return cls.from_osz_file(zf, min_version=min_version,
+                                     meta_only=meta_only)
 
     @classmethod
     def from_path(cls, path, min_version=None, meta_only=False):
@@ -2392,7 +2393,8 @@ class Beatmap:
             Raised when the file cannot be parsed as a ``.osu`` file.
         """
         with open(path, encoding='utf-8-sig') as file:
-            return cls.from_file(file, min_version=min_version, meta_only=meta_only)
+            return cls.from_file(file, min_version=min_version,
+                                 meta_only=meta_only)
 
     @classmethod
     def from_osz_file(cls, file, min_version=None, meta_only=False):
