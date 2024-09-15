@@ -2045,6 +2045,7 @@ class Beatmap:
                     circles=True,
                     sliders=True,
                     spinners=True,
+                    holdnotes=True,
                     stacking=True,
                     easy=False,
                     hard_rock=False,
@@ -2118,6 +2119,8 @@ class Beatmap:
             keep_classes.append(Circle)
         if sliders:
             keep_classes.append(Slider)
+        if holdnotes:
+            keep_classes.append(HoldNote)
 
         return tuple(ob for ob in hit_objects if
                      isinstance(ob, tuple(keep_classes)))
