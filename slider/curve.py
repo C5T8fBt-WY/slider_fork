@@ -163,21 +163,11 @@ class Bezier(Curve):
         """Inner function to compute the theoretical positions of the bezier
         curve determined by control points, not considering the length of the
         actual curve in-game."""
-        t = np.asarray(t).reshape(-1, 1)
-
-        points = self.points
-
-        n = len(points) - 1
-        ixs = np.arange(n + 1)
-        return np.sum(
-            (
-                comb(n, ixs) *
-                (1 - t) ** (n - ixs) *
-                t ** ixs
-            )[:, np.newaxis] *
-            self._coordinates,
-            axis=-1,
-        )
+        prepoints = self._coordinates.T[..., None]  # this makes a copy
+        for _ in range(len(prepoints) - 1):
+            prepoints = prepoints[:-1] * (1 - t) + prepoints[1:] * t
+        ret = prepoints.squeeze(0).T
+        return ret
 
 
     @lazyval
