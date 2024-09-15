@@ -278,10 +278,15 @@ class HitObject:
         self.time = time
         self.hitsound = hitsound
         self.addition = addition
-        self.sample_sets = addition.split(':')[:2]
-        self.sample_idx = addition.split(':')[2]
-        self.hitsound_volume = addition.split(':')[3]
-        self.sample_filename = addition.split(':')[4]
+        _addition = addition.split(':')
+        if len(_addition) < 4:  # for some older maps (around v10)
+            _addition.extend(['0'] * (4 - len(_addition)))
+        if len(_addition) < 5:
+            _addition.append('')
+        self.sample_sets = _addition[:2]
+        self.sample_idx = _addition[2]
+        self.hitsound_volume = _addition[3]
+        self.sample_filename = _addition[4]
         self.new_combo = new_combo
         self.combo_skip = combo_skip
 
