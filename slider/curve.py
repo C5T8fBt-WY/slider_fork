@@ -155,18 +155,49 @@ class Bezier(Curve):
             holds the x coordinate at time t and the second column holds the y
             coordinate at time t.
         """
+        if self.length == 0:
+            return self._at_fallback(t)
+        
         t_discounted = t * (self.req_length / self.length)
         return self._at(t_discounted)
+    
+    def _at_fallback(self, t: np.ndarray):
+        """Inner function to compute the theoretical positions of the bezier
+        curve determined by control points, not considering the length of the
+        actual curve in-game."""
+        t = np.asarray(t).reshape(-1, 1)
 
+        points = self.points
+
+        n = len(points) - 1
+        ixs = np.arange(n + 1)
+        return np.sum(
+            (
+                comb(n, ixs) *
+                (1 - t) ** (n - ixs) *
+                t ** ixs
+            )[:, np.newaxis] *
+            self._coordinates,
+            axis=-1,
+        )
 
     def _at(self, t: np.ndarray):
         """Inner function to compute the theoretical positions of the bezier
         curve determined by control points, not considering the length of the
         actual curve in-game."""
+        if t.ndim == 0:
+            t = t.reshape(1)
+        if self._coordinates.shape[1] == 1:
+            # The (only?) case where the last anchor is red anchor
+            # so that only one control point is used.
+            # We use old method to deal with error.
+            return self._at_fallback(t)
         prepoints = self._coordinates.T[..., None]  # this makes a copy
         for _ in range(len(prepoints) - 1):
             prepoints = prepoints[:-1] * (1 - t) + prepoints[1:] * t
         ret = prepoints.squeeze(0).T
+        assert ret.shape == (len(t), 2), \
+            f"expected shape {(len(t), 2)}, got {ret.shape} (prepoints: {prepoints}, t: {t})"
         return ret
 
 
