@@ -287,13 +287,15 @@ class _MetaCurveMixin:
         bi = np.array([bisect.bisect_left(ts, t_i) for t_i in t], dtype=int)
         bi -= 1
 
-        ret = []
+        # the original impl not work for non-asceding t
+        ret = np.empty((len(t), 2))
         for i in range(len(self._curves)):
             pre_t = ts[i]
             post_t = ts[i + 1]
-            ret.extend(self._curves[i].at((t[bi == i] - pre_t) / (post_t - pre_t)))
+            idx = bi == i
+            ret[idx] = self._curves[i].at((t[idx] - pre_t) / (post_t - pre_t))
 
-        return np.array(ret)
+        return ret
 
 
 class MultiBezier(_MetaCurveMixin, Curve):
