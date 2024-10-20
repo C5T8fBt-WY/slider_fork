@@ -107,9 +107,14 @@ class Curve(metaclass=ABCMeta):
             kind = 'B'
         # The first point is specified at the beginning of
         # HitObject's packed str and should not be included here
-        return '|'.join(chain([kind],
-                              (str(int(point.x)) + ':' + str(int(point.y))
-                               for point in self.points[1:])))
+        if isinstance(self.points[0], Position):
+            return '|'.join(chain([kind],
+                            (str(int(point.x)) + ':' + str(int(point.y))
+                            for point in self.points[1:])))
+        else:
+            return '|'.join(chain([kind],
+                            (str(int(point[0])) + ':' + str(int(point[1]))
+                            for point in self.points[1:])))
 
     @lazyval
     def hard_rock(self):
@@ -136,7 +141,7 @@ class Bezier(Curve):
         self._coordinates = np.array(points).T
 
     def __call__(self, t: float):
-        coordinates = self.at(t)
+        coordinates = self.at(np.array(t))
         return Position(coordinates[0, 0], coordinates[0, 1])
 
     def at(self, t: np.ndarray):
