@@ -69,7 +69,7 @@ class Curve(metaclass=ABCMeta):
             The position of the curve.
         """
         raise NotImplementedError('__call__')
-    
+
     @abstractmethod
     def at(self, t) -> np.ndarray:
         """Compute the position of the curve at a sequence of times ``t``.
@@ -157,10 +157,10 @@ class Bezier(Curve):
         """
         if self.length == 0:
             return self._at_fallback(t)
-        
+
         t_discounted = t * (self.req_length / self.length)
         return self._at(t_discounted)
-    
+
     def _at_fallback(self, t: np.ndarray):
         """Inner function to compute the theoretical positions of the bezier
         curve determined by control points, not considering the length of the
@@ -197,9 +197,9 @@ class Bezier(Curve):
             prepoints = prepoints[:-1] * (1 - t) + prepoints[1:] * t
         ret = prepoints.squeeze(0).T
         assert ret.shape == (len(t), 2), \
-            f"expected shape {(len(t), 2)}, got {ret.shape} (prepoints: {prepoints}, t: {t})"
+            f"expected shape {(len(t), 2)}, \
+                got {ret.shape} (prepoints: {prepoints}, t: {t})"
         return ret
-
 
     @lazyval
     def length(self):
@@ -230,6 +230,7 @@ class _MetaCurveMixin:
         lengths = [c.length for c in self._curves]
         length = sum(lengths)
         out = []
+
         for i, j in enumerate(accumulate(lengths[:-1])):
             self._curves[i].req_length = lengths[i]
             out.append(j / length)
@@ -257,7 +258,8 @@ class _MetaCurveMixin:
         return self._curves[bi]((t - pre_t) / (post_t - pre_t))
 
     def at(self, t: np.ndarray) -> np.ndarray:
-        """Compute the position of the curve at a sequence of times ``t`` for this metacurve.
+        """Compute the position of the curve at a sequence of times ``t`` for
+        this metacurve.
 
         Parameters
         ----------
@@ -270,12 +272,12 @@ class _MetaCurveMixin:
             The positions of the curve.
         """
         ts = np.array([0] + self._ts)
-        
+
         if len(self._curves) == 1:
             return self._curves[0].at(t)
         if t.ndim == 0:
             t = t.reshape(1)
-    
+
         t = np.maximum(t, 1e-10)
         bi = np.array([bisect.bisect_left(ts, t_i) for t_i in t], dtype=int)
         bi -= 1
@@ -523,7 +525,7 @@ class Catmull(Curve):
         px = float(px)
         py = float(py)
         return Position(px, py)
-    
+
     def at(self, t: np.ndarray):
         result = []
         if t.ndim == 0:
@@ -547,9 +549,7 @@ class Catmull(Curve):
             y = ((S_list @ self.h) @ Cy_list).squeeze(-1).squeeze(-1)
             result = [Position(px, py) for px, py in zip(x, y)]
 
-
         return np.array(result)
-
 
 
 def get_center(a, b, c):
