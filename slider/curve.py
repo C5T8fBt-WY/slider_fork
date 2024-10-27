@@ -207,11 +207,22 @@ class Bezier(Curve):
         return ret
 
     @lazyval
-    def length(self):
+    def length(self, n_base=500):
         """Approximates length as piecewise linear function.
+        
+        Note: We observe almost no differences in computation time between
+        50 (original implementation) and 500, and there sometimes are
+        large errors in the former so we use the latter.
+        
+        Also, if the number of points is insanely high, we increase
+        the number of points to 1000.
         """
-        # NOTE: if the error is high, try increasing the samples
-        points = self._at(np.linspace(0, 1, 50))
+        
+        if len(self.points) > 1000:
+            n = 1000
+        else:
+            n = n_base
+        points = self._at(np.linspace(0, 1, n))
         return np.sum(
             np.sqrt(
                 np.sum(
